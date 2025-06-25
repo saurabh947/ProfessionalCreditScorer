@@ -21,11 +21,12 @@ class DisplayManager:
                 prof.get('last_name', 'N/A'),
                 prof.get('job_title', 'N/A'),
                 prof.get('company', 'N/A'),
-                prof.get('city', 'N/A')
+                prof.get('city', 'N/A'),
+                prof.get('source', 'N/A')  # Add source column
             ])
         
         # Create table
-        headers = ['ID', 'First Name', 'Last Name', 'Job Title', 'Company', 'City']
+        headers = ['ID', 'First Name', 'Last Name', 'Job Title', 'Company', 'City', 'Source']
         table = tabulate(table_data, headers=headers, tablefmt='grid', showindex=False)
         
         print(f"\n📊 Professionals in {city}:")
@@ -44,6 +45,7 @@ class DisplayManager:
         print(f"Job Title: {professional.get('job_title', 'N/A')}")
         print(f"Company: {professional.get('company', 'N/A')}")
         print(f"City: {professional.get('city', 'N/A')}")
+        print(f"Source: {professional.get('source', 'N/A')}")
         
         if 'created_at' in professional:
             created_at = professional['created_at']
@@ -76,11 +78,18 @@ class DisplayManager:
             
             # Group by city
             cities = {}
+            sources = {}
             for prof in all_professionals:
-                city = prof.get('city', 'Unknown')
+                city = prof.get('city', 'Unknown').title()
+                source = prof.get('source', 'Unknown')
+                
                 if city not in cities:
                     cities[city] = 0
                 cities[city] += 1
+                
+                if source not in sources:
+                    sources[source] = 0
+                sources[source] += 1
             
             print("\n📊 DATABASE STATISTICS")
             print("=" * 40)
@@ -89,6 +98,10 @@ class DisplayManager:
             
             for city, count in sorted(cities.items()):
                 print(f"  {city}: {count}")
+            
+            print("\nProfessionals by source:")
+            for source, count in sorted(sources.items()):
+                print(f"  {source}: {count}")
             
             print("=" * 40)
             
@@ -105,7 +118,9 @@ class DisplayManager:
         print("2. View all professionals in database")
         print("3. View professionals by city")
         print("4. View database statistics")
-        print("5. Exit")
+        print("5. Show available search methods")
+        print("6. Clear all database records")
+        print("7. Exit")
         print("=" * 50)
     
     @staticmethod

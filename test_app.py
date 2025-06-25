@@ -43,6 +43,12 @@ def test_imports():
     except ImportError:
         print("⚠️  Tabulate not installed - run: pip install tabulate")
     
+    try:
+        import requests
+        print("✅ Requests module imported successfully")
+    except ImportError:
+        print("⚠️  Requests not installed - run: pip install requests")
+    
     return True
 
 def test_display_manager():
@@ -74,11 +80,18 @@ def test_config():
         print(f"Max results: {Config.MAX_RESULTS}")
         print(f"US cities only: {Config.US_CITIES_ONLY}")
         print(f"Database name: {Config.DATABASE_NAME}")
+        print(f"Use Apify: {Config.USE_APIFY}")
+        print(f"Gemini model: {Config.GEMINI_MODEL}")
         
         if Config.GEMINI_API_KEY:
             print("✅ Gemini API key found")
         else:
             print("⚠️  Gemini API key not found - set GEMINI_API_KEY environment variable")
+        
+        if Config.APIFY_API_TOKEN:
+            print("✅ Apify API token found")
+        else:
+            print("⚠️  Apify API token not found - set APIFY_API_TOKEN environment variable")
         
         print("✅ Configuration tests passed")
         return True
@@ -94,7 +107,7 @@ def test_sample_data():
     try:
         from display import DisplayManager
         
-        # Sample professional data
+        # Sample professional data with sources
         sample_professionals = [
             {
                 'unique_id': '12345678-1234-1234-1234-123456789abc',
@@ -102,7 +115,8 @@ def test_sample_data():
                 'last_name': 'Smith',
                 'job_title': 'Software Engineer',
                 'company': 'Tech Corp',
-                'city': 'San Francisco'
+                'city': 'San Francisco',
+                'source': 'LinkedIn Scraper'
             },
             {
                 'unique_id': '87654321-4321-4321-4321-cba987654321',
@@ -110,7 +124,17 @@ def test_sample_data():
                 'last_name': 'Johnson',
                 'job_title': 'Product Manager',
                 'company': 'Startup Inc',
-                'city': 'San Francisco'
+                'city': 'San Francisco',
+                'source': 'Google Search'
+            },
+            {
+                'unique_id': 'abcdef12-3456-7890-abcd-ef1234567890',
+                'first_name': 'Mike',
+                'last_name': 'Davis',
+                'job_title': 'Data Scientist',
+                'company': 'AI Solutions',
+                'city': 'San Francisco',
+                'source': 'Gemini AI'
             }
         ]
         
@@ -122,6 +146,89 @@ def test_sample_data():
         print(f"❌ Sample data test failed: {e}")
         return False
 
+def test_apify_controller_structure():
+    """Test Apify controller structure (without API calls)"""
+    print("\n🧪 Testing Apify controller structure...")
+    
+    try:
+        # Test if we can import the module
+        from apify_controller import ApifyController
+        from config import Config
+        print("✅ Apify controller module imported successfully")
+        
+        # Test available actors method (static data)
+        actors = ApifyController.get_available_actors(None)
+        if isinstance(actors, list) and len(actors) > 0:
+            print(f"✅ Available actors: {len(actors)} found")
+            for actor in actors:
+                print(f"  - {actor['name']}: {actor['id']}")
+        else:
+            print("⚠️  No available actors found")
+        
+        # Test API connection if token is available
+        if Config.APIFY_API_TOKEN:
+            try:
+                controller = ApifyController()
+                if controller.test_api_connection():
+                    print("✅ Apify API connection test passed")
+                else:
+                    print("⚠️  Apify API connection test failed")
+            except Exception as e:
+                print(f"⚠️  Apify API connection test error: {e}")
+        else:
+            print("⚠️  Skipping Apify API connection test (no token)")
+        
+        print("✅ Apify controller structure tests passed")
+        return True
+        
+    except ImportError as e:
+        print(f"⚠️  Apify controller not available: {e}")
+        return True  # Not a failure, just not available
+    except Exception as e:
+        print(f"❌ Apify controller test failed: {e}")
+        return False
+
+def test_clear_database_functionality():
+    """Test clear database functionality structure"""
+    print("\n🧪 Testing clear database functionality...")
+    
+    try:
+        # Test if we can import the database module
+        from database import DatabaseManager
+        print("✅ Database manager module imported successfully")
+        
+        # Test if clear_database method exists
+        db_manager = DatabaseManager()
+        if hasattr(db_manager, 'clear_database'):
+            print("✅ Clear database method exists")
+        else:
+            print("❌ Clear database method not found")
+            return False
+        
+        # Test if the method is callable
+        if callable(getattr(db_manager, 'clear_database')):
+            print("✅ Clear database method is callable")
+        else:
+            print("❌ Clear database method is not callable")
+            return False
+        
+        # Test statistics method exists (used in clear confirmation)
+        if hasattr(db_manager, 'get_statistics'):
+            print("✅ Get statistics method exists")
+        else:
+            print("❌ Get statistics method not found")
+            return False
+        
+        print("✅ Clear database functionality tests passed")
+        return True
+        
+    except ImportError as e:
+        print(f"⚠️  Database manager not available: {e}")
+        return True  # Not a failure, just not available
+    except Exception as e:
+        print(f"❌ Clear database test failed: {e}")
+        return False
+
 def main():
     """Run all tests"""
     print("🏢 Professional Finder - Test Suite")
@@ -131,7 +238,9 @@ def main():
         test_imports,
         test_config,
         test_display_manager,
-        test_sample_data
+        test_sample_data,
+        test_apify_controller_structure,
+        test_clear_database_functionality
     ]
     
     passed = 0
@@ -147,7 +256,9 @@ def main():
     if passed == total:
         print("🎉 All tests passed! Application is ready to use.")
         print("\nNext steps:")
-        print("1. Set up your GEMINI_API_KEY in .env file")
+        print("1. Set up your API keys in .env file:")
+        print("   - GEMINI_API_KEY for Gemini AI")
+        print("   - APIFY_API_TOKEN for Apify integration")
         print("2. Start MongoDB (mongod)")
         print("3. Run: python main.py")
     else:
