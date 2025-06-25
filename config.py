@@ -9,6 +9,7 @@ class Config:
     
     # Google Gemini API configuration
     GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+    GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-2.0-flash-exp')  # Default to Gemini 2.5 Flash
     
     # MongoDB configuration
     MONGODB_URI = os.getenv('MONGODB_URI', 'mongodb://localhost:27017/')

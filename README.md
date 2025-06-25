@@ -1,10 +1,10 @@
 # Professional Finder
 
-A Python application that finds professionals in US cities using Google Gemini AI and stores the results in a local MongoDB database.
+A Python application that finds professionals in US cities using Google Gemini 2.5 Flash AI and stores the results in a local MongoDB database.
 
 ## Features
 
-- 🔍 Search for professionals in any US city using Google Gemini AI
+- 🔍 Search for professionals in any US city using Google Gemini 2.5 Flash AI
 - 💾 Store professional data in a local MongoDB database
 - 📊 Display results in beautiful tabular format
 - 🆔 Assign unique IDs to each professional
@@ -34,6 +34,7 @@ Before running this application, you need:
    - Add your Google Gemini API key:
      ```
      GEMINI_API_KEY=your_actual_api_key_here
+     GEMINI_MODEL=gemini-2.0-flash-exp
      ```
 
 4. **Start MongoDB:**

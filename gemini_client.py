@@ -11,7 +11,7 @@ class GeminiClient:
             raise ValueError("GEMINI_API_KEY not found in environment variables")
         
         genai.configure(api_key=Config.GEMINI_API_KEY)
-        self.model = genai.GenerativeModel('gemini-pro')
+        self.model = genai.GenerativeModel(Config.GEMINI_MODEL)
     
     def search_professionals(self, city, max_results=10):
         """Search for professionals in a given city using Gemini AI"""
@@ -51,7 +51,7 @@ class GeminiClient:
         """
         
         try:
-            print(f"🔍 Searching for professionals in {city}...")
+            print(f"🔍 Searching for professionals in {city} using {Config.GEMINI_MODEL}...")
             
             response = self.model.generate_content(prompt)
             
