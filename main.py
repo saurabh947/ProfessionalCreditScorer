@@ -7,6 +7,8 @@ and stores the results in a local MongoDB database.
 
 import sys
 import os
+from typing import List, Dict
+
 from database import DatabaseManager
 from gemini_client import GeminiClient
 from apify_controller import ApifyController
@@ -77,7 +79,7 @@ class ProfessionalFinder:
             professionals = []
             search_methods_used = []
             
-            # Try Apify first if available
+            # Try Apify if available
             if self.apify_controller and Config.USE_APIFY:
                 try:
                     print(f"🔍 Searching with HarvestAPI LinkedIn Profile Search...")
@@ -90,21 +92,6 @@ class ProfessionalFinder:
                         
                 except Exception as e:
                     print(f"⚠️  Apify search failed: {e}")
-            
-            # Fallback to Gemini if Apify failed or not configured
-            if (not professionals or len(professionals) < Config.MAX_RESULTS) and self.gemini_client:
-                try:
-                    remaining = Config.MAX_RESULTS - len(professionals)
-                    print(f"🔍 Searching with Gemini AI for {remaining} professionals...")
-                    gemini_professionals = self.gemini_client.search_professionals(
-                        city, 
-                        max_results=remaining
-                    )
-                    professionals.extend(gemini_professionals)
-                    search_methods_used.append("Gemini AI")
-                    
-                except Exception as e:
-                    print(f"⚠️  Gemini search failed: {e}")
             
             if not professionals:
                 self.display_manager.display_warning(f"No professionals found in {city}")
@@ -138,8 +125,12 @@ class ProfessionalFinder:
         unique_professionals = []
         
         for prof in professionals:
-            # Create a key based on name and company
-            key = f"{prof.get('first_name', '').lower()}_{prof.get('last_name', '').lower()}_{prof.get('company', '').lower()}"
+            # Create a key based on name and company with safe string conversion
+            first_name = str(prof.get('first_name', '')).lower()
+            last_name = str(prof.get('last_name', '')).lower()
+            company = str(prof.get('company', '')).lower()
+            
+            key = f"{first_name}_{last_name}_{company}"
             
             if key not in seen:
                 seen.add(key)
@@ -189,63 +180,130 @@ class ProfessionalFinder:
         except Exception as e:
             self.display_manager.display_error(f"Error retrieving professionals: {e}")
     
-    def show_search_methods(self):
-        """Show available search methods and their status"""
-        print("\n🔍 AVAILABLE SEARCH METHODS")
-        print("=" * 40)
-        
-        if self.apify_controller:
-            print("✅ Apify Integration: Available")
-            actors = self.apify_controller.get_available_actors()
-            for actor in actors:
-                print(f"  - {actor['name']}: {actor['description']}")
-        else:
-            print("❌ Apify Integration: Not available (missing API token)")
-        
-        if self.gemini_client:
-            print("✅ Gemini AI Integration: Available")
-            print(f"  - Model: {Config.GEMINI_MODEL}")
-        else:
-            print("❌ Gemini AI Integration: Not available (missing API key)")
-        
-        print(f"📊 Current search method: {'Apify' if Config.USE_APIFY else 'Gemini AI'}")
-        print("=" * 40)
-    
-    def clear_database(self):
-        """Clear all records from the database"""
+    def get_last_run_dataset(self):
+        """Get and save the last run's dataset"""
         try:
-            # Get current statistics for confirmation
-            stats = self.db_manager.get_statistics()
-            total_records = stats.get('total_professionals', 0)
-            
-            if total_records == 0:
-                self.display_manager.display_warning("Database is already empty")
+            if not self.apify_controller:
+                self.display_manager.display_error("Apify controller not available")
                 return
             
-            # Show confirmation with record count
-            print(f"\n⚠️  WARNING: This will permanently delete {total_records} records from the database!")
-            print("This action cannot be undone.")
+            print(f"🔍 Getting last run dataset...")
             
-            confirmation = input("Type 'DELETE' to confirm, or press Enter to cancel: ").strip()
+            # Get last run info first
+            actor_id = "harvestapi~linkedin-profile-search"
+            last_run_info = self.apify_controller.get_last_run_info(actor_id)
             
-            if confirmation == 'DELETE':
-                success = self.db_manager.clear_database()
-                if success:
-                    self.display_manager.display_success(f"Successfully cleared {total_records} records from database")
-                else:
-                    self.display_manager.display_error("Failed to clear database")
-            else:
-                print("🗑️  Database clear operation cancelled")
-                
+            if not last_run_info:
+                self.display_manager.display_warning("No successful last run found")
+                return
+            
+            print(f"✅ Found last run: {last_run_info.get('id', 'Unknown')}")
+            print(f"✅ Last run started: {last_run_info.get('startedAt', 'Unknown')}")
+            print(f"✅ Last run finished: {last_run_info.get('finishedAt', 'Unknown')}")
+            
+            # Get the dataset from the last run
+            results = self.apify_controller.get_last_run_dataset(actor_id, max_results=Config.MAX_RESULTS)
+            
+            if not results:
+                self.display_manager.display_warning("No results found in last run dataset")
+                return
+            
+            # Transform results to our format (without city parameter)
+            professionals = self._transform_results_from_last_run(results)
+            
+            if not professionals:
+                self.display_manager.display_warning("No professionals found in last run dataset")
+                return
+            
+            # Remove duplicates based on linkedinId
+            unique_professionals = self._remove_duplicates(professionals)
+            
+            # Save professionals to database
+            saved_count = 0
+            for professional in unique_professionals:
+                unique_id = self.db_manager.save_professional(professional)
+                if unique_id:
+                    saved_count += 1
+            
+            # Display results
+            self.display_manager.display_professionals_table(unique_professionals, "Last Run Dataset")
+            self.display_manager.display_search_summary("Last Run Dataset", len(unique_professionals), saved_count)
+            
+            print(f"\n🔍 Source: Last successful Apify run dataset")
+            
         except Exception as e:
-            self.display_manager.display_error(f"Error clearing database: {e}")
+            self.display_manager.display_error(f"Error getting last run dataset: {e}")
+    
+    def _transform_results_from_last_run(self, results: List[Dict]) -> List[Dict]:
+        """Transform results from last run without requiring city input"""
+        professionals = []
+        
+        for i, result in enumerate(results):
+            try:
+                print(f"🔍 Processing result {i+1}/{len(results)}")
+                
+                # Extract city from the result data if available
+                city = self._extract_city_from_result(result)
+                print(f"📍 Extracted city: '{city}' (type: {type(city)})")
+                
+                # Handle different result formats from different actors
+                professional = self.apify_controller._extract_professional_data(result, city)
+                if professional:
+                    professionals.append(professional)
+                    print(f"✅ Successfully processed professional: {professional.get('first_name', 'N/A')} {professional.get('last_name', 'N/A')}")
+                else:
+                    print(f"⚠️  Failed to extract professional data from result {i+1}")
+            except Exception as e:
+                print(f"⚠️  Error transforming result {i+1}: {e}")
+                continue
+        
+        return professionals
+    
+    def _extract_city_from_result(self, result: Dict) -> str:
+        """Extract city information from a result item"""
+        try:
+            # Try to get city from location data if available
+            location = result.get('location', {})
+            if location:
+                # Try parsed location first
+                parsed_location = location.get('parsed', {})
+                if parsed_location and parsed_location.get('city'):
+                    city = parsed_location.get('city')
+                    if city and isinstance(city, str):
+                        return city
+                
+                # Try linkedin text
+                linkedin_text = location.get('linkedinText')
+                if linkedin_text and isinstance(linkedin_text, str):
+                    return linkedin_text
+            
+            # Try to get city from current position
+            current_position = result.get('currentPosition', [])
+            if current_position and len(current_position) > 0:
+                pos_location = current_position[0].get('location')
+                if pos_location and isinstance(pos_location, str):
+                    return pos_location
+            
+            # Try to get city from experience
+            experience = result.get('experience', [])
+            if experience and len(experience) > 0:
+                exp_location = experience[0].get('location')
+                if exp_location and isinstance(exp_location, str):
+                    return exp_location
+            
+            # Default fallback
+            return 'unknown'
+            
+        except Exception as e:
+            print(f"⚠️  Error extracting city from result: {e}")
+            return 'unknown'
     
     def run_interactive_mode(self):
         """Run the application in interactive mode"""
         while True:
             try:
                 self.display_manager.display_menu()
-                choice = input("\nEnter your choice (1-7): ").strip()
+                choice = input("\nEnter your choice (1-6): ").strip()
                 
                 if choice == '1':
                     city = input("Enter city name: ").strip()
@@ -262,17 +320,14 @@ class ProfessionalFinder:
                     self.display_manager.display_database_stats(self.db_manager)
                 
                 elif choice == '5':
-                    self.show_search_methods()
+                    self.get_last_run_dataset()
                 
                 elif choice == '6':
-                    self.clear_database()
-                
-                elif choice == '7':
                     print("\n👋 Thank you for using Professional Finder!")
                     break
                 
                 else:
-                    self.display_manager.display_error("Invalid choice. Please enter 1-7.")
+                    self.display_manager.display_error("Invalid choice. Please enter 1-6.")
                 
                 input("\nPress Enter to continue...")
                 

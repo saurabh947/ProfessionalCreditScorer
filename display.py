@@ -15,22 +15,29 @@ class DisplayManager:
         # Prepare data for tabulation
         table_data = []
         for prof in professionals:
+            # Get LinkedIn ID (truncated for display)
+            linkedin_id = prof.get('linkedinId', 'N/A')
+            if linkedin_id and linkedin_id != 'N/A':
+                linkedin_id = linkedin_id[:8] + '...'
+            
             table_data.append([
                 prof.get('unique_id', 'N/A')[:8] + '...',  # Truncate UUID for display
+                linkedin_id,
                 prof.get('first_name', 'N/A'),
                 prof.get('last_name', 'N/A'),
-                prof.get('job_title', 'N/A'),
-                prof.get('company', 'N/A'),
+                prof.get('headline', 'N/A')[:30] + '...' if len(prof.get('headline', '')) > 30 else prof.get('headline', 'N/A'),
+                prof.get('job_title', 'N/A')[:25] + '...' if len(prof.get('job_title', '')) > 25 else prof.get('job_title', 'N/A'),
+                prof.get('company', 'N/A')[:20] + '...' if len(prof.get('company', '')) > 20 else prof.get('company', 'N/A'),
                 prof.get('city', 'N/A'),
-                prof.get('source', 'N/A')  # Add source column
+                prof.get('source', 'N/A')
             ])
         
         # Create table
-        headers = ['ID', 'First Name', 'Last Name', 'Job Title', 'Company', 'City', 'Source']
+        headers = ['ID', 'LinkedIn ID', 'First Name', 'Last Name', 'Headline', 'Job Title', 'Company', 'City', 'Source']
         table = tabulate(table_data, headers=headers, tablefmt='grid', showindex=False)
         
         print(f"\n📊 Professionals in {city}:")
-        print("=" * 80)
+        print("=" * 120)
         print(table)
         print(f"\nTotal professionals found: {len(professionals)}")
     
@@ -76,7 +83,7 @@ class DisplayManager:
                 print("\n📊 Database is empty")
                 return
             
-            # Group by city
+            # Group by city and source
             cities = {}
             sources = {}
             for prof in all_professionals:
@@ -94,10 +101,7 @@ class DisplayManager:
             print("\n📊 DATABASE STATISTICS")
             print("=" * 40)
             print(f"Total professionals: {len(all_professionals)}")
-            print("\nProfessionals by city:")
-            
-            for city, count in sorted(cities.items()):
-                print(f"  {city}: {count}")
+            print(f"Number of cities: {len(cities)}")
             
             print("\nProfessionals by source:")
             for source, count in sorted(sources.items()):
@@ -118,9 +122,8 @@ class DisplayManager:
         print("2. View all professionals in database")
         print("3. View professionals by city")
         print("4. View database statistics")
-        print("5. Show available search methods")
-        print("6. Clear all database records")
-        print("7. Exit")
+        print("5. Get last run's dataset")
+        print("6. Exit")
         print("=" * 50)
     
     @staticmethod

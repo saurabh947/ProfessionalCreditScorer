@@ -4,19 +4,16 @@ A Python application that finds professionals in US cities using Google Gemini 2
 
 ## Features
 
-- 🔍 Search for professionals in any US city using multiple methods:
-  - **Apify LinkedIn Scraper** - Real LinkedIn profile data
-  - **Apify Google Search Scraper** - Web search results
-  - **Google Gemini 2.5 Flash AI** - AI-powered professional discovery
-- 💾 Store professional data in a local MongoDB database
-- 📊 Display results in beautiful tabular format with source tracking
-- 🆔 Assign unique IDs to each professional
-- 🔄 Interactive menu system
-- 📈 Database statistics and reporting
-- 🗑️ Database management (view, filter, clear all records)
-- 🚀 Command-line and interactive modes
-- 🔄 Automatic fallback between search methods
+- 🔍 Search for professionals in any US city using Apify LinkedIn Profile Search
+- 📊 Store and manage professional data in MongoDB
 - 🎯 Duplicate detection and removal
+- **Professional Search**: Search for professionals in US cities using Apify's LinkedIn Profile Search
+- **Apify Integration**: Use Apify's LinkedIn Profile Search actor for comprehensive data
+- **Last Run Dataset**: Retrieve and save data from the most recent successful Apify run
+- **Database Storage**: Store results in MongoDB with deduplication
+- **Rich Data**: Capture comprehensive LinkedIn profile information
+- **Interactive Interface**: User-friendly command-line interface
+- **Gemini AI Integration**: Available for other AI features (not used for professional search)
 
 ## Prerequisites
 
@@ -53,19 +50,15 @@ Before running this application, you need:
 ## Usage
 
 ### Interactive Mode
-Run the application without arguments to start interactive mode:
-```bash
-python main.py
-```
 
-This will show a menu with options:
-1. Search for professionals in a city
-2. View all professionals in database
-3. View professionals by city
-4. View database statistics
-5. Show available search methods
-6. Clear all database records
-7. Exit
+Run the application and choose from the menu:
+
+1. **Search for professionals in a city** - Use Apify to find professionals
+2. **View all professionals in database** - Display all stored professionals
+3. **View professionals by city** - Filter professionals by specific city
+4. **View database statistics** - Show database metrics and counts
+5. **Get last run's dataset** - Retrieve data from the most recent successful Apify run (no city input required)
+6. **Exit** - Close the application
 
 ### Command Line Mode
 Search for professionals in a specific city:
@@ -75,23 +68,12 @@ python main.py "San Francisco"
 
 ## Search Methods
 
-The application uses multiple search methods to find professionals:
+The application uses Apify's LinkedIn Profile Search for finding professionals:
 
-### 1. HarvestAPI LinkedIn Profile Search
-- **Actor ID**: `harvestapi~linkedin-profile-search`
-- **Description**: Searches LinkedIn profiles for professional information
-- **Data Quality**: High (real professional data from LinkedIn)
-- **Speed**: Medium (web scraping)
-
-### 2. Google Gemini 2.5 Flash AI
-- **Model**: `gemini-2.0-flash-exp`
-- **Description**: AI-powered professional discovery
-- **Data Quality**: Variable (AI-generated)
-- **Speed**: Very fast
-
-### Search Strategy
-1. **Primary**: HarvestAPI LinkedIn Profile Search (if API token available)
-2. **Fallback**: Google Gemini AI (if Apify fails or not configured)
+- **Apify LinkedIn Profile Search**: Searches LinkedIn profiles for professional information
+  - Provides comprehensive profile data from real LinkedIn profiles
+  - Requires Apify API token
+  - Returns rich professional data including experience, education, skills, and more
 
 ## Database Management
 
@@ -103,10 +85,7 @@ The application provides comprehensive database management features:
 - **Database Statistics**: View summary statistics including total records, cities, and data sources
 
 ### Data Management
-- **Clear Database**: Permanently delete all records from the database
-  - Shows confirmation with record count before deletion
-  - Requires typing 'DELETE' to confirm the action
-  - Cannot be undone - use with caution
+- **Database Statistics**: View summary statistics including total records, cities, and data sources
 
 ### Data Integrity
 - **Duplicate Detection**: Automatically prevents duplicate entries based on name, company, and city
@@ -144,24 +123,27 @@ Professionals found: 10
 Professionals saved to database: 10
 ================================================================================
 
-🔍 Search methods used: HarvestAPI LinkedIn Profile Search, Gemini AI
+🔍 Search method used: HarvestAPI LinkedIn Profile Search
 ```
 
 ## Project Structure
 
 ```
 AthenaAI/
-├── main.py              # Main application entry point
-├── config.py            # Configuration and environment variables
-├── database.py          # MongoDB database operations
-├── gemini_client.py     # Google Gemini AI client
-├── apify_controller.py  # Apify API integration
-├── display.py           # Display and formatting utilities
-├── requirements.txt     # Python dependencies
-├── env_example.txt      # Example environment variables
-├── test_app.py          # Test suite
-├── test_apify_dataset.py # Apify dataset retrieval test
-└── README.md           # This file
+├── main.py                   # Main application entry point
+├── config.py                 # Configuration and environment variables
+├── database.py               # MongoDB database operations
+├── gemini_client.py          # Google Gemini AI client
+├── apify_controller.py       # Apify API integration
+├── display.py                # Display and formatting utilities
+├── requirements.txt          # Python dependencies
+├── env_example.txt           # Example environment variables
+├── test_app.py               # Test suite
+├── test_apify_dataset.py     # Apify dataset retrieval test
+├── test_linkedin_fields.py   # LinkedIn field extraction test
+├── docs/
+│   └── fields.json           # Sample LinkedIn profile data
+└── README.md                 # This file
 ```
 
 ## Configuration
@@ -175,17 +157,49 @@ AthenaAI/
 - `MONGODB_URI`: MongoDB connection string (default: `mongodb://localhost:27017/`)
 - `MAX_RESULTS`: Maximum number of professionals to find (default: 10)
 
+**Note**: The application uses a database named `database_training_data` to store professional information.
+
 ### Database Schema
 
 Each professional record contains:
 - `unique_id`: Unique identifier (UUID)
+- `linkedinId`: LinkedIn profile ID (from Apify response)
+- `publicIdentifier`: LinkedIn public identifier
 - `first_name`: Professional's first name
 - `last_name`: Professional's last name
-- `job_title`: Current job title
-- `company`: Current company/organization
+- `headline`: Professional headline/title
+- `about`: Professional summary/about section
+- `linkedinUrl`: LinkedIn profile URL
+- `openToWork`: Whether they're open to work
+- `hiring`: Whether they're hiring
+- `premium`: Whether they have premium LinkedIn
+- `influencer`: Whether they're an influencer
+- `photo`: Profile photo URL
+- `verified`: Whether profile is verified
+- `registeredAt`: When they registered on LinkedIn
+- `connectionsCount`: Number of connections
+- `followerCount`: Number of followers
+- `topSkills`: Top skills summary
+- `job_title`: Current job title (from most recent experience)
+- `company`: Current company (from most recent experience)
+- `employmentType`: Employment type (Full-time, Part-time, etc.)
+- `workplaceType`: Workplace type (On-site, Remote, Hybrid)
 - `city`: City where they work
 - `source`: Data source (LinkedIn Scraper, Google Search, Gemini AI)
 - `created_at`: Timestamp when record was created
+
+**Rich Profile Data:**
+- `location_*`: Detailed location information (parsed from LinkedIn)
+- `currentPosition_*`: Current position details
+- `experience`: Complete work experience history (array)
+- `education`: Education history (array)
+- `certifications`: Professional certifications (array)
+- `receivedRecommendations`: Recommendations received (array)
+- `skills`: Skills and endorsements (array)
+- `languages`: Languages spoken (array)
+- `projects`: Projects worked on (array)
+- `publications`: Publications (array)
+- `moreProfiles`: Related profiles/connections (array)
 
 ## API Integration
 

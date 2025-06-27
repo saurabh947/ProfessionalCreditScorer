@@ -188,45 +188,38 @@ def test_apify_controller_structure():
         print(f"❌ Apify controller test failed: {e}")
         return False
 
-def test_clear_database_functionality():
-    """Test clear database functionality structure"""
-    print("\n🧪 Testing clear database functionality...")
+def test_database_manager_functionality():
+    """Test database manager functionality structure"""
+    print("\n🧪 Testing database manager functionality...")
     
     try:
         # Test if we can import the database module
         from database import DatabaseManager
         print("✅ Database manager module imported successfully")
         
-        # Test if clear_database method exists
+        # Test if get_statistics method exists
         db_manager = DatabaseManager()
-        if hasattr(db_manager, 'clear_database'):
-            print("✅ Clear database method exists")
-        else:
-            print("❌ Clear database method not found")
-            return False
-        
-        # Test if the method is callable
-        if callable(getattr(db_manager, 'clear_database')):
-            print("✅ Clear database method is callable")
-        else:
-            print("❌ Clear database method is not callable")
-            return False
-        
-        # Test statistics method exists (used in clear confirmation)
         if hasattr(db_manager, 'get_statistics'):
             print("✅ Get statistics method exists")
         else:
             print("❌ Get statistics method not found")
             return False
         
-        print("✅ Clear database functionality tests passed")
+        # Test if the method is callable
+        if callable(getattr(db_manager, 'get_statistics')):
+            print("✅ Get statistics method is callable")
+        else:
+            print("❌ Get statistics method is not callable")
+            return False
+        
+        print("✅ Database manager functionality tests passed")
         return True
         
     except ImportError as e:
         print(f"⚠️  Database manager not available: {e}")
         return True  # Not a failure, just not available
     except Exception as e:
-        print(f"❌ Clear database test failed: {e}")
+        print(f"❌ Database manager test failed: {e}")
         return False
 
 def main():
@@ -240,7 +233,7 @@ def main():
         test_display_manager,
         test_sample_data,
         test_apify_controller_structure,
-        test_clear_database_functionality
+        test_database_manager_functionality
     ]
     
     passed = 0

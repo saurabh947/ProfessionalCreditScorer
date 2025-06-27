@@ -19,5 +19,5 @@ USE_APIFY=true
 MONGODB_URI=mongodb://localhost:27017/
 
 # Application Settings
-MAX_RESULTS=10
+MAX_RESULTS=2500
 # US_CITIES_ONLY=true 

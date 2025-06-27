@@ -20,6 +20,6 @@ class Config:
     COLLECTION_NAME = 'professionals'
     
     # Application settings
-    MAX_RESULTS = int(os.getenv('MAX_RESULTS', 10))
+    MAX_RESULTS = int(os.getenv('MAX_RESULTS', 2500))
     US_CITIES_ONLY = True
     USE_APIFY = os.getenv('USE_APIFY', 'true').lower() == 'true'  # Default to using Apify 
